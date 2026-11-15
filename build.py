@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static Digest demo-link site from the sibling Digest repository."""
+"""Build the static demo-link site from the sibling application repository."""
 
 from __future__ import annotations
 
@@ -16,6 +16,9 @@ from urllib.parse import unquote, urlparse
 REPO_ROOT = Path(__file__).resolve().parent
 DOCS = REPO_ROOT / "docs"
 DEFAULT_SOURCE = REPO_ROOT.parent / "digest" / "dev-tools" / "demo-data" / "senders.json"
+
+# Product display name only. Repository names and the public URL remain unchanged.
+APP_NAME = "Digest"
 
 
 def parse_args() -> argparse.Namespace:
@@ -94,9 +97,9 @@ def story_body(sender: dict[str, Any], story: dict[str, Any]) -> str:
   {paragraphs_html}
   {bullets_html}
   {quote_html}
-  <aside class="demo-note"><strong>Fictional demo article.</strong> This page exists so a link opened from Digest’s demo inbox has a safe, realistic destination.</aside>
+  <aside class="demo-note"><strong>Fictional demo article.</strong> This page exists so a link opened from {esc(APP_NAME)}’s demo inbox has a safe, realistic destination.</aside>
 </main>
-<footer><a href="../">More from {esc(sender['name'])}</a><span>Digest demo link</span></footer>
+<footer><a href="../">More from {esc(sender['name'])}</a><span>{esc(APP_NAME)} demo link</span></footer>
 """
 
 
@@ -122,7 +125,7 @@ def sender_index(sender: dict[str, Any], public_base: str) -> str:
 <footer><a href="preferences/">Email preferences</a><a href="unsubscribe/">Unsubscribe</a><span>Fictional publication</span></footer>
 """
     return shell(
-        title=f"{sender['name']} — Digest demo",
+        title=f"{sender['name']} — {APP_NAME} demo",
         description=sender["deck"],
         body=body,
         css_path="../assets/site.css",
@@ -138,7 +141,7 @@ def status_page(sender: dict[str, Any], kind: str, public_base: str) -> str:
     if kind == "unsubscribe":
         title = f"No subscription changed — {sender['name']}"
         heading = "Nothing was unsubscribed"
-        copy = "This is a fictional newsletter used by Digest’s demo inbox. There is no mailing list and no personal information was submitted."
+        copy = f"This is a fictional newsletter used by {APP_NAME}’s demo inbox. There is no mailing list and no personal information was submitted."
     else:
         title = f"Demo preferences — {sender['name']}"
         heading = "Demo email preferences"
@@ -170,7 +173,7 @@ def message_page(sender: dict[str, Any], message: dict[str, Any], public_base: s
     paragraphs = "".join(f"<p>{esc(item)}</p>" for item in message["paragraphs"])
     action = esc(message.get("actionLabel", "Open"))
     body = f"""
-<header class="service-head"><a class="back" href="../../../">← Digest demo links</a><p>{esc(sender['name'])}</p></header>
+<header class="service-head"><a class="back" href="../../../">← {esc(APP_NAME)} demo links</a><p>{esc(sender['name'])}</p></header>
 <main class="article service">
   <h1>{esc(message['subject'])}</h1>
   {paragraphs}
@@ -201,20 +204,20 @@ def landing(newsletters: list[dict[str, Any]], public_base: str) -> str:
     )
     body = f"""
 <header class="home-hero">
-  <p class="eyebrow">Digest demo links</p>
+  <p class="eyebrow">{esc(APP_NAME)} demo links</p>
   <h1>The stories behind the inbox</h1>
-  <p>Safe, fictional destinations for links opened from Digest’s newsletter demo. No sign-in, subscription, tracking, or personal data.</p>
+  <p>Safe, fictional destinations for links opened from {esc(APP_NAME)}’s newsletter demo. No sign-in, subscription, tracking, or personal data.</p>
 </header>
 <main class="home-main">
   <div class="intro-row"><h2>Publications</h2><p>{len(newsletters)} fictional archives</p></div>
   <div class="publication-grid">{cards}</div>
-  <section class="about"><h2>Why this site exists</h2><p>Digest is a calm seated VR space for catching up on newsletters. These static pages let its browser-opening interaction work during a demo without directing people to real publishers or changing services.</p></section>
+  <section class="about"><h2>Why this site exists</h2><p>{esc(APP_NAME)} is a calm seated VR space for catching up on newsletters. These static pages let its browser-opening interaction work during a demo without directing people to real publishers or changing services.</p></section>
 </main>
 <footer><span>Fictional demo content</span><span>No analytics or cookies</span></footer>
 """
     return shell(
-        title="Digest demo links",
-        description="Fictional article destinations for the Digest demo inbox.",
+        title=f"{APP_NAME} demo links",
+        description=f"Fictional article destinations for the {APP_NAME} demo inbox.",
         body=body,
         css_path="assets/site.css",
         canonical=f"{public_base}/",
@@ -292,13 +295,13 @@ def build(source_path: Path) -> None:
             page_count += 1
 
     not_found = """
-<main class="status-card"><div class="mark" aria-hidden="true">D</div><p class="eyebrow">Digest demo links</p><h1>That fictional page is missing</h1><p>The link may belong to a newer version of the demo dataset.</p><a class="button" href="/digest-demo/">Browse the demo publications</a></main>
+<main class="status-card"><div class="mark" aria-hidden="true">{html.escape(APP_NAME[:1].upper() or "D")}</div><p class="eyebrow">{html.escape(APP_NAME)} demo links</p><h1>That fictional page is missing</h1><p>The link may belong to a newer version of the demo dataset.</p><a class="button" href="/digest-demo/">Browse the demo publications</a></main>
 """
     write(
         DOCS / "404.html",
         shell(
-            title="Page not found — Digest demo",
-            description="This fictional Digest demo page was not found.",
+            title=f"Page not found — {APP_NAME} demo",
+            description=f"This fictional {APP_NAME} demo page was not found.",
             body=not_found,
             css_path="/digest-demo/assets/site.css",
             canonical=f"{public_base}/404.html",

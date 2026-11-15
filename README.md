@@ -2,6 +2,10 @@
 
 Static fictional newsletter pages opened by links in Digest's demo inbox.
 
+The product display name is set once in `build.py` as `APP_NAME`. Change that
+value and rebuild to switch names (for example, from `Digest` to `Mailroom`)
+without changing the repository name or public URL.
+
 The published site is `https://mz8i.com/digest-demo/`. GitHub Pages should publish from the `docs/` directory on `main`.
 
 ## Build
