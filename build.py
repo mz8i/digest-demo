@@ -304,7 +304,7 @@ def build(source_path: Path) -> None:
             )
             page_count += 1
 
-    not_found = """
+    not_found = f"""
 <main class="status-card"><div class="mark" aria-hidden="true">{html.escape(APP_NAME[:1].upper() or "D")}</div><p class="eyebrow">{html.escape(APP_NAME)} demo links</p><h1>That fictional page is missing</h1><p>The link may belong to a newer version of the demo dataset.</p><a class="button" href="/digest-demo/">Browse the demo publications</a></main>
 """
     write(
