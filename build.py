@@ -15,6 +15,7 @@ from urllib.parse import unquote, urlparse
 
 REPO_ROOT = Path(__file__).resolve().parent
 DOCS = REPO_ROOT / "docs"
+SOURCE_ASSETS = REPO_ROOT / "assets"
 DEFAULT_SOURCE = REPO_ROOT.parent / "digest" / "dev-tools" / "demo-data" / "senders.json"
 
 # Product display name only. Repository names and the public URL remain unchanged.
@@ -105,6 +106,13 @@ def story_body(sender: dict[str, Any], story: dict[str, Any]) -> str:
 
 def sender_index(sender: dict[str, Any], public_base: str) -> str:
     esc = html.escape
+    hero = sender.get("hero")
+    hero_html = ""
+    if hero:
+        hero_html = (
+            f'\n<figure class="publication-hero"><img src="../assets/mail/{esc(sender["key"])}/banner.webp" '
+            f'alt="{esc(hero["alt"])}"><figcaption>{esc(hero["caption"])}</figcaption></figure>'
+        )
     stories = "".join(
         f'<li><a href="{esc(story["slug"])}/"><span>{esc(story["heading"])}</span>'
         f'<small>{esc(story["subject"])}</small></a></li>'
@@ -117,7 +125,7 @@ def sender_index(sender: dict[str, Any], public_base: str) -> str:
   <p class="eyebrow">{esc(sender['editionLabel'])}</p>
   <h1>{esc(sender['masthead'])}</h1>
   <p class="deck">{esc(sender['deck'])}</p>
-</header>
+</header>{hero_html}
 <main class="index-page">
   <h2>From the archive</h2>
   <ul class="story-list">{stories}</ul>
@@ -242,6 +250,8 @@ def build(source_path: Path) -> None:
     if DOCS.exists():
         shutil.rmtree(DOCS)
     (DOCS / "assets").mkdir(parents=True)
+    if SOURCE_ASSETS.exists():
+        shutil.copytree(SOURCE_ASSETS, DOCS / "assets", dirs_exist_ok=True)
 
     write(DOCS / ".nojekyll", "")
     write(DOCS / "robots.txt", "User-agent: *\nDisallow: /\n")
@@ -309,15 +319,21 @@ def build(source_path: Path) -> None:
     )
     dataset = generator.build_dataset(source)
     public_links = set()
+    public_images = set()
     for entry in dataset["messages"] + dataset["arrivals"]:
         public_links.update(
             link
             for link in re.findall(r'href="([^"]+)"', entry["html"], re.IGNORECASE)
             if link.startswith(public_base + "/")
         )
+        public_images.update(
+            source
+            for source in re.findall(r'<img[^>]+src="([^"]+)"', entry["html"], re.IGNORECASE)
+            if source.startswith(public_base + "/")
+        )
     missing = []
     base_path = urlparse(public_base).path.rstrip("/") + "/"
-    for link in sorted(public_links):
+    for link in sorted(public_links | public_images):
         path = unquote(urlparse(link).path)
         if not path.startswith(base_path):
             missing.append(link)
@@ -332,10 +348,11 @@ def build(source_path: Path) -> None:
         raise RuntimeError("Missing generated targets:\n" + "\n".join(missing))
     print(f"Built {page_count + 1} HTML pages in {DOCS}")
     print(f"Validated {len(public_links)} unique URLs used by DemoMail.json")
+    print(f"Validated {len(public_images)} hosted images used by DemoMail.json")
 
 
 CSS = r"""
-:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper);font-synthesis:none}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink)}a{color:inherit}.masthead,.home-hero,.service-head{max-width:760px;margin:0 auto;padding:64px 28px 48px}.masthead.compact{padding-bottom:12px}.back{display:inline-block;margin-bottom:40px;text-decoration:none;font-size:.9rem;opacity:.68}.mark,.mini-mark{display:grid;place-items:center;background:var(--accent);color:var(--ink);font-weight:800;letter-spacing:-.04em}.mark{width:72px;height:72px;border-radius:22px;margin-bottom:22px}.mini-mark{width:44px;height:44px;border-radius:14px;font-size:.78rem}.eyebrow{font-size:.76rem;font-weight:750;letter-spacing:.15em;text-transform:uppercase;opacity:.66}.masthead h1,.home-hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.7rem,8vw,5.8rem);line-height:.94;letter-spacing:-.045em;margin:.18em 0}.deck,.home-hero>p:last-child{font-family:Georgia,"Times New Roman",serif;font-size:1.35rem;line-height:1.55;max-width:650px}.article,.index-page,.home-main{max-width:760px;margin:0 auto;padding:24px 28px 80px}.article h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.4rem,7vw,4.9rem);line-height:1.02;letter-spacing:-.035em;margin:.25em 0}.article p,.article li{font-family:Georgia,"Times New Roman",serif;font-size:1.2rem;line-height:1.75}.article .standfirst{font-style:italic;font-size:1.06rem;opacity:.7;margin-bottom:42px}.article blockquote{font-family:Georgia,"Times New Roman",serif;font-size:1.55rem;line-height:1.5;border-left:5px solid var(--accent);margin:38px 0;padding:8px 0 8px 25px}.demo-note,.action-result{margin-top:54px;padding:22px 24px;border-radius:18px;background:color-mix(in srgb,var(--accent) 16%,white);font-size:.95rem;line-height:1.6}.story-list{list-style:none;margin:0;padding:0;border-top:1px solid color-mix(in srgb,var(--ink) 20%,transparent)}.story-list a{display:flex;justify-content:space-between;gap:24px;padding:21px 4px;border-bottom:1px solid color-mix(in srgb,var(--ink) 20%,transparent);text-decoration:none}.story-list span{font-family:Georgia,"Times New Roman",serif;font-size:1.15rem}.story-list small{max-width:250px;text-align:right;opacity:.6}.home-hero{padding-top:90px}.home-hero h1{max-width:700px}.intro-row{display:flex;align-items:baseline;justify-content:space-between}.intro-row p{opacity:.6}.publication-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.publication{display:flex;min-height:210px;flex-direction:column;gap:15px;padding:22px;border-radius:22px;text-decoration:none;color:var(--card-ink);background:var(--card-paper);border:1px solid color-mix(in srgb,var(--card-accent) 45%,transparent)}.publication .mini-mark{margin-bottom:auto;background:var(--card-accent);color:var(--card-ink)}.publication strong{font-family:Georgia,"Times New Roman",serif;font-size:1.2rem}.publication small{line-height:1.45;opacity:.68}.about{margin-top:70px;padding:36px;border-radius:24px;background:#fff9}.about p{font-family:Georgia,"Times New Roman",serif;font-size:1.18rem;line-height:1.65}.status-card{max-width:620px;margin:12vh auto;padding:48px;border-radius:28px;background:#fff9;box-shadow:0 20px 70px #0001}.status-card h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.2rem,7vw,4rem);line-height:1}.status-card p{font-size:1.08rem;line-height:1.65}.button{display:inline-block;margin-top:18px;padding:13px 18px;border-radius:12px;background:var(--accent);text-decoration:none;font-weight:750}.service-head{padding-bottom:10px}.service-head p{font-weight:800;color:var(--accent)}.action-result{display:flex;flex-direction:column;gap:5px}.action-result span{font-family:inherit;font-size:.92rem}footer{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:28px;border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent);font-size:.8rem;opacity:.7}footer a{text-decoration:none}@media(max-width:720px){.publication-grid{grid-template-columns:1fr 1fr}.story-list a{flex-direction:column;gap:7px}.story-list small{text-align:left;max-width:none}}@media(max-width:470px){.publication-grid{grid-template-columns:1fr}.masthead,.home-hero,.service-head{padding-left:20px;padding-right:20px}.article,.index-page,.home-main{padding-left:20px;padding-right:20px}.status-card{margin:20px;padding:30px}}
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper);font-synthesis:none}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink)}a{color:inherit}.masthead,.home-hero,.service-head{max-width:760px;margin:0 auto;padding:64px 28px 48px}.masthead.compact{padding-bottom:12px}.back{display:inline-block;margin-bottom:40px;text-decoration:none;font-size:.9rem;opacity:.68}.mark,.mini-mark{display:grid;place-items:center;background:var(--accent);color:var(--ink);font-weight:800;letter-spacing:-.04em}.mark{width:72px;height:72px;border-radius:22px;margin-bottom:22px}.mini-mark{width:44px;height:44px;border-radius:14px;font-size:.78rem}.eyebrow{font-size:.76rem;font-weight:750;letter-spacing:.15em;text-transform:uppercase;opacity:.66}.masthead h1,.home-hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.7rem,8vw,5.8rem);line-height:.94;letter-spacing:-.045em;margin:.18em 0}.deck,.home-hero>p:last-child{font-family:Georgia,"Times New Roman",serif;font-size:1.35rem;line-height:1.55;max-width:650px}.publication-hero{max-width:760px;margin:-18px auto 24px;padding:0 28px}.publication-hero img{display:block;width:100%;height:auto;border-radius:24px}.publication-hero figcaption{margin-top:10px;font-family:Georgia,"Times New Roman",serif;font-size:.88rem;font-style:italic;opacity:.65}.article,.index-page,.home-main{max-width:760px;margin:0 auto;padding:24px 28px 80px}.article h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.4rem,7vw,4.9rem);line-height:1.02;letter-spacing:-.035em;margin:.25em 0}.article p,.article li{font-family:Georgia,"Times New Roman",serif;font-size:1.2rem;line-height:1.75}.article .standfirst{font-style:italic;font-size:1.06rem;opacity:.7;margin-bottom:42px}.article blockquote{font-family:Georgia,"Times New Roman",serif;font-size:1.55rem;line-height:1.5;border-left:5px solid var(--accent);margin:38px 0;padding:8px 0 8px 25px}.demo-note,.action-result{margin-top:54px;padding:22px 24px;border-radius:18px;background:color-mix(in srgb,var(--accent) 16%,white);font-size:.95rem;line-height:1.6}.story-list{list-style:none;margin:0;padding:0;border-top:1px solid color-mix(in srgb,var(--ink) 20%,transparent)}.story-list a{display:flex;justify-content:space-between;gap:24px;padding:21px 4px;border-bottom:1px solid color-mix(in srgb,var(--ink) 20%,transparent);text-decoration:none}.story-list span{font-family:Georgia,"Times New Roman",serif;font-size:1.15rem}.story-list small{max-width:250px;text-align:right;opacity:.6}.home-hero{padding-top:90px}.home-hero h1{max-width:700px}.intro-row{display:flex;align-items:baseline;justify-content:space-between}.intro-row p{opacity:.6}.publication-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.publication{display:flex;min-height:210px;flex-direction:column;gap:15px;padding:22px;border-radius:22px;text-decoration:none;color:var(--card-ink);background:var(--card-paper);border:1px solid color-mix(in srgb,var(--card-accent) 45%,transparent)}.publication .mini-mark{margin-bottom:auto;background:var(--card-accent);color:var(--card-ink)}.publication strong{font-family:Georgia,"Times New Roman",serif;font-size:1.2rem}.publication small{line-height:1.45;opacity:.68}.about{margin-top:70px;padding:36px;border-radius:24px;background:#fff9}.about p{font-family:Georgia,"Times New Roman",serif;font-size:1.18rem;line-height:1.65}.status-card{max-width:620px;margin:12vh auto;padding:48px;border-radius:28px;background:#fff9;box-shadow:0 20px 70px #0001}.status-card h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.2rem,7vw,4rem);line-height:1}.status-card p{font-size:1.08rem;line-height:1.65}.button{display:inline-block;margin-top:18px;padding:13px 18px;border-radius:12px;background:var(--accent);text-decoration:none;font-weight:750}.service-head{padding-bottom:10px}.service-head p{font-weight:800;color:var(--accent)}.action-result{display:flex;flex-direction:column;gap:5px}.action-result span{font-family:inherit;font-size:.92rem}footer{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:28px;border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent);font-size:.8rem;opacity:.7}footer a{text-decoration:none}@media(max-width:720px){.publication-grid{grid-template-columns:1fr 1fr}.story-list a{flex-direction:column;gap:7px}.story-list small{text-align:left;max-width:none}}@media(max-width:470px){.publication-grid{grid-template-columns:1fr}.masthead,.home-hero,.service-head{padding-left:20px;padding-right:20px}.publication-hero,.article,.index-page,.home-main{padding-left:20px;padding-right:20px}.status-card{margin:20px;padding:30px}}
 """
 
 
