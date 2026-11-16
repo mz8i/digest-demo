@@ -19,9 +19,7 @@ SOURCE_ASSETS = REPO_ROOT / "assets"
 DEFAULT_SOURCE = REPO_ROOT.parent / "digest" / "dev-tools" / "demo-data" / "senders.json"
 
 # Product display name only. Repository names and the public URL remain unchanged.
-APP_NAME = "Digest"
-
-
+APP_NAME = "Mailroom"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
@@ -305,7 +303,7 @@ def build(source_path: Path) -> None:
             page_count += 1
 
     not_found = f"""
-<main class="status-card"><div class="mark" aria-hidden="true">{html.escape(APP_NAME[:1].upper() or "D")}</div><p class="eyebrow">{html.escape(APP_NAME)} demo links</p><h1>That fictional page is missing</h1><p>The link may belong to a newer version of the demo dataset.</p><a class="button" href="/digest-demo/">Browse the demo publications</a></main>
+<main class="status-card"><div class="mark" aria-hidden="true">{html.escape(APP_NAME[:1].upper() or "D")}</div><p class="eyebrow">{html.escape(APP_NAME)} demo links</p><h1>That fictional page is missing</h1><p>The link may belong to a newer version of the demo dataset.</p><a class="button" href="/mailroom-demo/">Browse the demo publications</a></main>
 """
     write(
         DOCS / "404.html",
@@ -313,7 +311,7 @@ def build(source_path: Path) -> None:
             title=f"Page not found — {APP_NAME} demo",
             description=f"This fictional {APP_NAME} demo page was not found.",
             body=not_found,
-            css_path="/digest-demo/assets/site.css",
+            css_path="/mailroom-demo/assets/site.css",
             canonical=f"{public_base}/404.html",
         ),
     )
