@@ -316,8 +316,10 @@ def build(source_path: Path) -> None:
         ),
     )
     dataset = generator.build_dataset(source)
+    newsletter_addresses = {sender["address"] for sender in newsletters}
     public_links = set()
     public_images = set()
+    issue_markers = []
     for entry in dataset["messages"] + dataset["arrivals"]:
         public_links.update(
             link
@@ -329,6 +331,14 @@ def build(source_path: Path) -> None:
             for source in re.findall(r'<img[^>]+src="([^"]+)"', entry["html"], re.IGNORECASE)
             if source.startswith(public_base + "/")
         )
+        if entry["senderAddress"] in newsletter_addresses:
+            marker = re.search(r'data-demo-issue="(\d{3,})"', entry["html"])
+            if marker is None:
+                raise RuntimeError(f"Newsletter has no issue marker: {entry['id']}")
+            issue_markers.append((entry["senderAddress"], marker.group(1)))
+    if len(issue_markers) != len(set(issue_markers)):
+        raise RuntimeError("A newsletter sender has duplicate issue numbers")
+
     missing = []
     base_path = urlparse(public_base).path.rstrip("/") + "/"
     for link in sorted(public_links | public_images):
@@ -347,6 +357,7 @@ def build(source_path: Path) -> None:
     print(f"Built {page_count + 1} HTML pages in {DOCS}")
     print(f"Validated {len(public_links)} unique URLs used by DemoMail.json")
     print(f"Validated {len(public_images)} hosted images used by DemoMail.json")
+    print(f"Validated {len(issue_markers)} unique newsletter issue headers")
 
 
 CSS = r"""
